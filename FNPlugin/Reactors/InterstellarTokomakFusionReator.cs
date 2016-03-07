@@ -6,9 +6,6 @@ namespace FNPlugin
 {
     class InterstellarTokamakFusionReactor : InterstellarFusionReactor
     {
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Maintance")]
-        public string tokomakPower;
-
         public bool fusion_alert = false;
         public float power_consumed = 0.0f;
         public int jumpstartPowerTime = 0;
@@ -20,9 +17,9 @@ namespace FNPlugin
         public float HeatingPowerRequirements 
 		{ 
 			get { 
-				return current_fuel_mode == null 
-					? powerRequirements 
-					: (float)(powerRequirements * current_fuel_mode.NormalisedPowerRequirements); 
+				return current_fuel_mode == null
+                    ? PowerRequirement
+                    : PowerRequirement * current_fuel_mode.NormalisedPowerRequirements; 
 			} 
 		}
 
@@ -43,9 +40,32 @@ namespace FNPlugin
                 fusion_alert = true;
             }
 
-            Events["SwapNextFuelMode"].active = true;
-            Events["SwapPreviousFuelMode"].active = true;
-            tokomakPower = PluginHelper.getFormattedPowerString(power_consumed) + "/" + PluginHelper.getFormattedPowerString(HeatingPowerRequirements);
+            electricPowerMaintenance = PluginHelper.getFormattedPowerString(power_consumed) + " / " + PluginHelper.getFormattedPowerString(HeatingPowerRequirements);
+        }
+
+        private float GetPlasmaRatio(float consumedPower)
+        {
+            return (float)Math.Round(HeatingPowerRequirements != 0.0f ? consumedPower / HeatingPowerRequirements : 1.0f, 4);
+        }
+
+        public override void StartReactor()
+        {
+            base.StartReactor();
+
+            if (HighLogic.LoadedSceneIsEditor) return;
+
+            // consume from any stored megajoule source
+            power_consumed = part.RequestResource(FNResourceManager.FNRESOURCE_MEGAJOULES, HeatingPowerRequirements * TimeWarp.fixedDeltaTime) / TimeWarp.fixedDeltaTime; 
+            plasma_ratio = GetPlasmaRatio(power_consumed);
+            UnityEngine.Debug.Log("[KSPI] - InterstellarTokamakFusionReactor StartReactor plasma_ratio " + plasma_ratio);
+            allowJumpStart = plasma_ratio == 1;
+            if (allowJumpStart)
+            {
+                ScreenMessages.PostScreenMessage("Starting fusion reaction", 5f, ScreenMessageStyle.LOWER_CENTER);
+                jumpstartPowerTime = 100;
+            }
+            else
+                ScreenMessages.PostScreenMessage("Not enough power to start fusion reaction", 5f, ScreenMessageStyle.LOWER_CENTER);
         }
 
         public override void OnFixedUpdate() 
@@ -67,7 +87,7 @@ namespace FNPlugin
                 }
                 else
                 {
-                    plasma_ratio = (float)Math.Round(HeatingPowerRequirements != 0.0f ? power_consumed / HeatingPowerRequirements : 1.0f, 4);
+                    plasma_ratio = GetPlasmaRatio(power_consumed);
                     allowJumpStart = plasma_ratio == 1;
                 }
             }
@@ -80,9 +100,6 @@ namespace FNPlugin
 
         public override void OnStart(PartModule.StartState state)
         {
-            Events["SwapNextFuelMode"].active = true;
-            Events["SwapPreviousFuelMode"].active = true;
-
             if (state != StartState.Editor)
             {
                 if (allowJumpStart)

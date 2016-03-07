@@ -5,13 +5,10 @@ using UnityEngine;
 namespace FNPlugin 
 {
     [KSPModule("IC Fusion Reactor")]
-    class InterstellarInertialConfinementReactor : InterstellarFusionReactor, IChargedParticleSource
+    class InterstellarInertialConfinementReactor : InterstellarFusionReactor
     {
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Maintenance")]
-        public string laserPower;
         [KSPField(isPersistant = true)]
         protected double accumulatedElectricChargeInMW;
-
 
         [KSPField(isPersistant = false, guiActive = true, guiName = "Charge")]
         public string accumulatedChargeStr = String.Empty;
@@ -30,9 +27,6 @@ namespace FNPlugin
 
         public override void OnStart(PartModule.StartState state)
         {
-            Events["SwapNextFuelMode"].active = true;
-            Events["SwapPreviousFuelMode"].active = true;
-
             if (state != StartState.Editor && allowJumpStart)
             {
                 if (startDisabled)
@@ -49,12 +43,12 @@ namespace FNPlugin
 
         public override bool IsNeutronRich { get { return !current_fuel_mode.Aneutronic; } }
 
-	    [KSPField(isPersistant = false, guiActive = true, guiName = "HeatingPowerRequirements")]
 	    public float LaserPowerRequirements
 	    {
-		    get { return current_fuel_mode == null 
-				? powerRequirements 
-				: (float)(powerRequirements * current_fuel_mode.NormalisedPowerRequirements); }
+		    get { return current_fuel_mode == null
+                ? PowerRequirement
+                : PowerRequirement * current_fuel_mode.NormalisedPowerRequirements;
+            }
 	    }
         
         public override bool shouldScaleDownJetISP() 
@@ -72,13 +66,9 @@ namespace FNPlugin
             else 
                 fusion_alert = false;
 
-            Events["SwapNextFuelMode"].active = true;
-            Events["SwapPreviousFuelMode"].active = true;
-
             Fields["accumulatedChargeStr"].guiActive = plasma_ratio < 1;
 
-
-            laserPower = PluginHelper.getFormattedPowerString(power_consumed) + "/" + PluginHelper.getFormattedPowerString(LaserPowerRequirements);
+            electricPowerMaintenance = PluginHelper.getFormattedPowerString(power_consumed) + " / " + PluginHelper.getFormattedPowerString(LaserPowerRequirements);
             base.OnUpdate();
         }
 
@@ -107,7 +97,6 @@ namespace FNPlugin
                 return;
             }
 
-			//power_consumed = part.RequestResource(FNResourceManager.FNRESOURCE_MEGAJOULES, LaserPowerRequirements * TimeWarp.fixedDeltaTime) / TimeWarp.fixedDeltaTime;
             power_consumed = consumeFNResource(LaserPowerRequirements * TimeWarp.fixedDeltaTime, FNResourceManager.FNRESOURCE_MEGAJOULES) / TimeWarp.fixedDeltaTime;
 
             if (TimeWarp.fixedDeltaTime <= 0.1 && accumulatedElectricChargeInMW > 0 && power_consumed < LaserPowerRequirements && (accumulatedElectricChargeInMW + power_consumed) >= LaserPowerRequirements)

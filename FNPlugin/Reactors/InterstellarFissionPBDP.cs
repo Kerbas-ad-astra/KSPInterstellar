@@ -1,15 +1,11 @@
-﻿extern alias ORSvKSPIE;
-using ORSvKSPIE::OpenResourceSystem;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using UnityEngine;
 
 namespace FNPlugin
 {
-    [KSPModule("Fission Reactor")]
-    class InterstellarFissionPBDPsmall : InterstellarFissionPBDP {}
-
     [KSPModule("Fission Reactor")]
     class InterstellarFissionPBDP : InterstellarReactor, IChargedParticleSource
     {
@@ -17,11 +13,32 @@ namespace FNPlugin
         [KSPField(isPersistant = false)]
         public float optimalPebbleTemp;
         [KSPField(isPersistant = false)]
+        public bool heatThrottling = false;
+        [KSPField(isPersistant = false)]
         public float tempZeroPower;
         [KSPField(isPersistant = false)]
         public float upgradedOptimalPebbleTemp = 1000;
         [KSPField(isPersistant = false)]
-        private float upgradedTempZeroPower = 1250;
+        public float upgradedTempZeroPower = 1250;
+        [KSPField(isPersistant = false, guiActiveEditor = false, guiActive = true, guiUnits= "%", guiName = "Overheating")]
+        public float overheatPercentage;
+        [KSPField(isPersistant = false, guiActiveEditor = false, guiActive = false, guiName = "Wasteheat Ratio")]
+        public float resourceBarRatio;
+        [KSPField(isPersistant = false)]
+        public float thermalRatioEfficiencyModifier = 0.81f;
+        [KSPField(isPersistant = false)]
+        public float maximumChargedIspMult = 114f;
+        [KSPField(isPersistant = false)]
+        public float minimumChargdIspMult = 11.4f;
+        [KSPField(isPersistant = false)]
+        public float coreTemperatureWasteheatPower = 0.25f;
+        [KSPField(isPersistant = false)]
+        public float coreTemperatureWasteheatModifier = -0.2f;
+        [KSPField(isPersistant = false)]
+        public float coreTemperatureWasteheatMultiplier = 1.25f;
+
+        private float optimalTempDifference;
+     
 
         [KSPEvent(guiName = "Manual Restart", externalToEVAOnly = true, guiActiveUnfocused = true, unfocusedRange = 3.5f)]
         public void ManualRestart()
@@ -35,35 +52,26 @@ namespace FNPlugin
             IsEnabled = false;
         }
 
-        // Properties
+        public float MaximumChargedIspMult { get { return maximumChargedIspMult; } }
+
+        public float MinimumChargdIspMult { get { return minimumChargdIspMult; } }
+
         public double CurrentMeVPerChargedProduct { get { return current_fuel_mode != null ? current_fuel_mode.MeVPerChargedProduct : 0; } }
 
-        public override bool IsNeutronRich { get { return current_fuel_mode != null ? !current_fuel_mode.Aneutronic : false; } }
+        public override bool IsNeutronRich { get { return current_fuel_mode != null && !current_fuel_mode.Aneutronic; } }
 
-        public override float MaximumThermalPower 
-        { 
-            get 
-            {
-                return base.MaximumThermalPower * (float)OverheatingRatio; 
-            } 
-        }
+        public override float MaximumThermalPower { get { return base.MaximumThermalPower * (float)ThermalRatioEfficiency; } }
 
-        public override float MaximumChargedPower
+        public override float MaximumChargedPower { get  { return base.MaximumChargedPower * (float)ThermalRatioEfficiency; } }
+
+        private float ThermalRatioEfficiency
         {
-            get
-            {
-                return base.MaximumChargedPower * (float)OverheatingRatio;
-            }
+            get { return reactorType == 4 || heatThrottling ? Mathf.Pow((ZeroPowerTemp - CoreTemperature) / optimalTempDifference, thermalRatioEfficiencyModifier) : 1; }
         }
 
-        private double OverheatingRatio
-        {
-            get { return Math.Pow((ZeroPowerTemp - CoreTemperature) / (ZeroPowerTemp - OptimalTemp), 0.81); }
-        }
+        private float OptimalTemp { get { return isupgraded ? upgradedOptimalPebbleTemp : optimalPebbleTemp; } }
 
-        public float OptimalTemp { get { return isupgraded ? upgradedOptimalPebbleTemp : optimalPebbleTemp; } }
-
-        public float ZeroPowerTemp { get { return isupgraded ? upgradedTempZeroPower : tempZeroPower; } }
+        private float ZeroPowerTemp { get { return isupgraded ? upgradedTempZeroPower : tempZeroPower; } }
 
         public override float MinimumPower { get { return MaximumPower * minimumThrottle; } }
 
@@ -73,23 +81,10 @@ namespace FNPlugin
         {
             get
             {
-                if (HighLogic.LoadedSceneIsFlight) 
+                if (HighLogic.LoadedSceneIsFlight && (reactorType == 4 || heatThrottling) ) 
                 {
-                    //var temp_scale = (vessel != null && FNRadiator.hasRadiatorsForVessel(vessel)) 
-                    //    ? (float)FNRadiator.getAverageMaximumRadiatorTemperatureForVessel(vessel) 
-                    //    : optimalPebbleTemp;
-
-                    double resourceBarRatio;
-                    try
-                    {
-                        resourceBarRatio = getResourceBarRatio(FNResourceManager.FNRESOURCE_WASTEHEAT);
-                    }
-                    catch (Exception error)
-                    {
-                        UnityEngine.Debug.Log("[KSPI] - InterstellarFissionPBDP.CoreTemperature getResourceBarRatio exception: " + error.Message + " returning 0");
-                        resourceBarRatio = 0;
-                    }
-                    var temperatureIncrease = Math.Pow(resourceBarRatio, 0.25) * (ZeroPowerTemp - OptimalTemp);
+                    resourceBarRatio = (float)getResourceBarRatio(FNResourceManager.FNRESOURCE_WASTEHEAT);
+                    var temperatureIncrease = Math.Max(Math.Pow(resourceBarRatio, coreTemperatureWasteheatPower) + coreTemperatureWasteheatModifier, 0) * coreTemperatureWasteheatMultiplier * optimalTempDifference;
 
                     return (float)Math.Min(Math.Max(OptimalTemp + temperatureIncrease, OptimalTemp), ZeroPowerTemp);
                 } 
@@ -105,14 +100,24 @@ namespace FNPlugin
                 upgradedTempZeroPower = upgradedReactorTemp * 1.25f;
 
             base.OnStart(state);
+
+            overheatPercentage = (1 - ThermalRatioEfficiency) * 100;
+
+            optimalTempDifference = ZeroPowerTemp - OptimalTemp;
         }
       
 
         public override void OnUpdate()
         {
+            overheatPercentage = (1 - ThermalRatioEfficiency) * 100;
             Events["ManualRestart"].active = Events["ManualRestart"].guiActiveUnfocused = !IsEnabled && !decay_ongoing;
             Events["ManualShutdown"].active = Events["ManualShutdown"].guiActiveUnfocused = IsEnabled;
             base.OnUpdate();
+        }
+
+        public override void OnFixedUpdate()
+        {
+            base.OnFixedUpdate();
         }
 
         public override bool shouldScaleDownJetISP()
@@ -120,44 +125,35 @@ namespace FNPlugin
             return true;
         }
 
-        //protected override double consumeReactorFuel(ReactorFuel fuel, double consume_amount)
-        //{
-        //    if (!consumeGlobal)
-        //    {
-        //        if (part.Resources.Contains(fuel.FuelName) && part.Resources.Contains(InterstellarResourcesConfiguration.Instance.DepletedFuel))
-        //        {
-        //            double amount = Math.Min(consume_amount, part.Resources[fuel.FuelName].amount / FuelEfficiency);
-        //            part.Resources[fuel.FuelName].amount -= amount;
-        //            part.Resources[InterstellarResourcesConfiguration.Instance.DepletedFuel].amount += amount;
-        //            return amount;
-        //        } 
-        //        else return 0;
-        //    } 
-        //    else
-        //        return part.ImprovedRequestResource(fuel.FuelName, consume_amount / FuelEfficiency);
-        //}
-
         public override float GetCoreTempAtRadiatorTemp(float rad_temp)
         {
-            float pfr_temp = 0;
+            if (reactorType == 4 || heatThrottling)
+            {
+                float pfr_temp = 0;
 
-            if (!double.IsNaN(rad_temp) && !double.IsInfinity(rad_temp))
-                pfr_temp = (float)Math.Min(Math.Max(rad_temp * 1.5, OptimalTemp), ZeroPowerTemp);
-            else
-                pfr_temp = OptimalTemp;
+                if (!double.IsNaN(rad_temp) && !double.IsInfinity(rad_temp))
+                    pfr_temp = (float)Math.Min(Math.Max(rad_temp * 1.5, OptimalTemp), ZeroPowerTemp);
+                else
+                    pfr_temp = OptimalTemp;
 
-            return pfr_temp;
+                return pfr_temp;
+            }
+            return base.GetCoreTempAtRadiatorTemp(rad_temp);
         }
 
         public override float GetThermalPowerAtTemp(float temp)
         {
-            float rel_temp_diff = 0;
-            if (temp > OptimalTemp && temp < ZeroPowerTemp) 
-                rel_temp_diff = (float)Math.Pow((ZeroPowerTemp - temp) / (ZeroPowerTemp - OptimalTemp), 0.81);
-            else
-                rel_temp_diff = 1;
+            if (reactorType == 4 || heatThrottling)
+            {
+                float rel_temp_diff;
+                if (temp > OptimalTemp && temp < ZeroPowerTemp)
+                    rel_temp_diff = (float)Math.Pow((ZeroPowerTemp - temp) / (ZeroPowerTemp - OptimalTemp), thermalRatioEfficiencyModifier);
+                else
+                    rel_temp_diff = 1;
 
-            return MaximumPower * rel_temp_diff;
+                return MaximumPower * rel_temp_diff;
+            }
+            return base.GetThermalPowerAtTemp(temp);
         }
 
 

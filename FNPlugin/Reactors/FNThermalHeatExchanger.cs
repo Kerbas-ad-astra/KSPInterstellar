@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-//using System.Threading.Tasks;
 using UnityEngine;
 
-namespace FNPlugin  {
+namespace FNPlugin  
+{
 	class FNThermalHeatExchanger : FNResourceSuppliableModule, IThermalSource 
     {
         //Persistent True
@@ -17,6 +17,8 @@ namespace FNPlugin  {
         public float radius;
         [KSPField(isPersistant = false)]
         public float heatTransportationEfficiency = 0.7f;
+        [KSPField(isPersistant = false)]
+        public float maximumPowerRecieved = 6;
 
         //GUI
 		[KSPField(isPersistant = false, guiActive = true, guiName = "Thermal Power")]
@@ -31,16 +33,24 @@ namespace FNPlugin  {
         protected Dictionary<Guid, float> connectedRecieversFraction = new Dictionary<Guid, float>();
         protected float connectedRecieversSum;
 
-        protected double storedIsThermalEnergyGenratorActive;
-        protected double currentIsThermalEnergyGenratorActive;
+        protected double storedIsThermalEnergyGeneratorActive;
+        protected double currentIsThermalEnergyGeneratorActive;
 
-        public double EfficencyConnectedThermalEnergyGenrator { get { return storedIsThermalEnergyGenratorActive; } }
+        public Part Part { get { return this.part; } }
+
+        public int SupportedPropellantsTypes { get { return 119; } }
+
+        public bool FullPowerForNonNeutronAbsorbants { get { return true; } }
+
+        public float ThermalProcessingModifier { get { return 1; } }
+
+        public double EfficencyConnectedThermalEnergyGenrator { get { return storedIsThermalEnergyGeneratorActive; } }
 
         public double EfficencyConnectedChargedEnergyGenrator { get { return 0; } }
 
         public void NotifyActiveThermalEnergyGenrator(double efficency, ElectricGeneratorType generatorType)
         {
-            currentIsThermalEnergyGenratorActive = efficency;
+            currentIsThermalEnergyGeneratorActive = efficency;
         }
 
         public void NotifyActiveChargedEnergyGenrator(double efficency, ElectricGeneratorType generatorType) { }
@@ -50,6 +60,8 @@ namespace FNPlugin  {
         public bool ShouldApplyBalance (ElectricGeneratorType generatorType) {  return false;  }
 
         public double ChargedPowerRatio { get { return 0; } }
+
+        public float RawMaximumPower { get { return maximumPowerRecieved; } }
 
         public void AttachThermalReciever(Guid key, float radius)
         {
@@ -91,8 +103,8 @@ namespace FNPlugin  {
 
         public double ProducedWasteHeat { get { return 0; } }
 
-        //properties
         public float PowerBufferBonus { get { return 0; } }
+
         public float ThermalTransportationEfficiency { get { return heatTransportationEfficiency; } }
 
         public float ThermalPropulsionEfficiency { get { return 1; } }
@@ -104,6 +116,8 @@ namespace FNPlugin  {
         public bool IsSelfContained { get { return false; } }
 
         public float CoreTemperature { get { return 1500; } }
+
+        public float HotBathTemperature { get { return CoreTemperature * 1.5f; } }
 
         public float StableMaximumReactorPower { get { return MaximumThermalPower; } }
 
@@ -120,8 +134,6 @@ namespace FNPlugin  {
         public bool IsActive { get { return IsEnabled; } }
 
         public bool IsNuclear { get { return false; } }
-
-        
 
 
 		[KSPEvent(guiActive = true, guiName = "Activate Heat Exchanger", active = false)]
@@ -182,38 +194,20 @@ namespace FNPlugin  {
 
 		public override void OnFixedUpdate() 
         {
-            storedIsThermalEnergyGenratorActive = currentIsThermalEnergyGenratorActive;
-            currentIsThermalEnergyGenratorActive = 0;
+            storedIsThermalEnergyGeneratorActive = currentIsThermalEnergyGeneratorActive;
+            currentIsThermalEnergyGeneratorActive = 0;
             
             base.OnFixedUpdate ();
 			setupThermalPower ();
 		}
 
-		public float getCoreTemp() {
-            return 1500;
-		}
-
-        public float GetCoreTempAtRadiatorTemp(float rad_temp) {
-            return 1500;
-        }
+        public float GetCoreTempAtRadiatorTemp(float rad_temp) {  return 1500; }
 
         public float GetThermalPowerAtTemp(float temp) {
             return _thermalpower;
         }
 
-		public float getThermalPower() {
-			return _thermalpower;
-		}
-
-        public float getChargedPower() {
-            return 0;
-        }
-
-		public bool getIsNuclear() {
-			return false;
-		}
-
-		public float getRadius() {
+		public float GetRadius() {
 			return radius;
 		}
 
@@ -221,7 +215,7 @@ namespace FNPlugin  {
             return IsEnabled;
         }
 
-        public void enableIfPossible() {
+        public void EnableIfPossible() {
             IsEnabled = true;
         }
 

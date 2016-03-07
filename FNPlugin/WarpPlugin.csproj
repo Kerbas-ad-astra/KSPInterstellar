@@ -26,7 +26,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release KSP 0.90|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\..\..\..\Games\Kerbal Space Program 0.90\GameData\WarpPlugin\Plugins\</OutputPath>
+    <OutputPath>.\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -49,11 +49,22 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release KSP 1.0|AnyCPU'">
+    <OutputPath>bin\Release KSP 1.0\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <OutputPath>bin\Release\</OutputPath>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.QualityTools.Testing.Fakes, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Scale_Redist, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\TweakScale\plugins\Scale_Redist.dll</HintPath>
@@ -78,7 +89,16 @@
     <Compile Include="Extensions\ThermalSourceSearchResult.cs" />
     <Compile Include="Microwave\IElectricPowerSource.cs" />
     <Compile Include="Propulsion\AlcubierreDrive.cs" />
-    <Compile Include="Propulsion\INoozle.cs" />
+    <Compile Include="Propulsion\Contract\INoozle.cs" />
+    <Compile Include="Propulsion\ExtendedPropellant.cs" />
+    <Compile Include="Propulsion\ModuleEnginesWarpVista.cs" />
+    <Compile Include="Propulsion\ModuleEnginesWarp.cs" />
+    <Compile Include="Propulsion\FNModuleRCSFX.cs" />
+    <Compile Include="Propulsion\FNRCSSounds.cs" />
+    <Compile Include="Propulsion\PropellantControl.cs" />
+    <Compile Include="Propulsion\ThermalEnginePropellant.cs" />
+    <Compile Include="Propulsion\ThermalPowerTransport.cs" />
+    <Compile Include="Propulsion\VistaEngineControllerAdvanced.cs" />
     <Compile Include="Refinery\AluminiumElectrolyser.cs" />
     <Compile Include="Collectors\AntimatterCollector.cs" />
     <Compile Include="Refinery\AntimatterFactory.cs" />
@@ -90,6 +110,7 @@
     <Compile Include="Refinery\ReverseWaterGasShift.cs" />
     <Compile Include="Refinery\WaterGasShift.cs" />
     <Compile Include="Refinery\CarbonDioxideElectroliser.cs" />
+    <Compile Include="Science\InterstellarResourceScienceModule.cs" />
     <Compile Include="Toolbar\InterstellarToolbar.cs" />
     <Compile Include="Microwave\MicrowaveSources.cs" />
     <Compile Include="Refinery\HaberProcess.cs" />
@@ -109,7 +130,7 @@
     <Compile Include="Science\FNLCMassSpectrometer.cs" />
     <Compile Include="Science\FNMassSpectrometer.cs" />
     <Compile Include="Storage\FNModuleCryostat.cs" />
-    <Compile Include="FNModulePreecooler.cs" />
+    <Compile Include="Wasteheat\FNModulePreecooler.cs" />
     <Compile Include="Refinery\FNModuleResourceExtraction.cs" />
     <Compile Include="Science\DTMagnetometer.cs" />
     <Compile Include="Reactors\FNAntimatterReactor.cs" />
@@ -129,12 +150,12 @@
     <Compile Include="Reactors\InterstellarReactor.cs" />
     <Compile Include="Reactors\InterstellarTokomakFusionReator.cs" />
     <Compile Include="Collectors\ISRUScoop.cs" />
-    <Compile Include="FNResourceManager.cs" />
+    <Compile Include="Wasteheat\FNResourceManager.cs" />
     <Compile Include="FNResourceSuppliableModule.cs" />
     <Compile Include="Microwave\MicrowavePowerReceiver.cs" />
     <Compile Include="Microwave\MicrowavePowerTransmitter.cs" />
     <Compile Include="Microwave\MicrowaveRoute.cs" />
-    <Compile Include="ModableExperimentResultDialogPage.cs" />
+    <Compile Include="Science\ModableExperimentResultDialogPage.cs" />
     <Compile Include="Science\ModuleModableScienceGenerator.cs" />
     <Compile Include="Storage\ModuleElementRadioactiveDecay.cs" />
     <Compile Include="Propulsion\ModuleSabreHeating.cs" />
@@ -151,7 +172,7 @@
     <Compile Include="FNGenerator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Science\ComputerCore.cs" />
-    <Compile Include="Propulsion\ElectricalRCSSystem.cs" />
+    <Compile Include="Microwave\InterstellarRCSModule.cs" />
     <Compile Include="Extensions\VesselExtensions.cs" />
     <Compile Include="Microwave\VesselMicrowavePersistence.cs" />
     <Compile Include="Microwave\VesselRelayPersistence.cs" />
@@ -179,7 +200,7 @@
     <ProjectReference Include="..\OpenResourceSystem\OpenResourceSystem.csproj">
       <Project>{bca16e74-23e5-4327-9d24-b908a8ce3836}</Project>
       <Name>OpenResourceSystem</Name>
-      <Aliases>ORSvKSPIE</Aliases>
+      <Aliases>global</Aliases>
     </ProjectReference>
   </ItemGroup>
 </Project>

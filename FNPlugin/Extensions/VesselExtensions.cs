@@ -1,6 +1,4 @@
-﻿extern alias ORSvKSPIE;
-using ORSvKSPIE::OpenResourceSystem;
-
+﻿using OpenResourceSystem;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +10,11 @@ namespace FNPlugin
 {
     public static class VesselExtensions
     {
+        public static bool HasAnyModulesImplementing<T>(this Vessel vessel) where T: class
+        {
+            return vessel.FindPartModulesImplementing<T>().Any();
+        }
+
         public static bool IsInAtmosphere(this Vessel vessel)
         {
             if (vessel.altitude <= PluginHelper.getMaxAtmosphericAltitude(vessel.mainBody)) return true;
@@ -24,7 +27,14 @@ namespace FNPlugin
             return active_reactors.Any() ? active_reactors.Min(ts => ts.CoreTemperature) : double.MaxValue;
         }
 
-        public static bool HasAnyActiveThermalSources(this Vessel vess) {
+        public static float GetAverageTemperatureofOfThermalSource(this Vessel vess)
+        {
+            List<IThermalSource> active_reactors = vess.FindPartModulesImplementing<IThermalSource>().Where(ts => ts.IsActive && ts.IsThermalSource).ToList();
+            return active_reactors.Any() ? active_reactors.Sum(r => r.HotBathTemperature) / active_reactors.Count : 0;
+        }
+
+        public static bool HasAnyActiveThermalSources(this Vessel vess) 
+        {
             return vess.FindPartModulesImplementing<IThermalSource>().Where(ts => ts.IsActive).Any();
         }
 

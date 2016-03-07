@@ -1,11 +1,10 @@
-extern alias ORSvKSPIE;
-
+using OpenResourceSystem;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-using ORSvKSPIE::OpenResourceSystem;
+
 
 namespace FNPlugin {
     [KSPModule("Radiation Status")]
@@ -85,7 +84,10 @@ namespace FNPlugin {
                     }
                 }
             }
-            catch (Exception ex) { }
+            catch (Exception ex) 
+            {
+                UnityEngine.Debug.LogError("[KSPI] - InterstellarReactor.FNModuleRadiation exception: " + ex.Message);
+            }
         }
 
         public override void OnStart(PartModule.StartState state)

@@ -217,7 +217,7 @@ namespace FNPlugin
 
             if (curEngineT == null) return;
 
-            float throttle = curEngineT.currentThrottle;
+            float throttle = curEngineT.currentThrottle > 0 ? Mathf.Max(curEngineT.currentThrottle, 0.01f) : 0;
 
             //double atmo_thrust_factor = Math.Min(1.0, Math.Max(1.0 - Math.Pow(vessel.atmDensity, 0.2), 0));
 
@@ -270,12 +270,17 @@ namespace FNPlugin
             }
             else
             {
+                var currentIsp = minISP * 100;
+
                 FloatCurve newISP = new FloatCurve();
-                newISP.Add(0, (float)minISP);
+                newISP.Add(0, (float)currentIsp);
                 curEngineT.atmosphereCurve = newISP;
 
-                var maxFuelFlow = MaximumThrust / minISP / PluginHelper.GravityConstant;
+                var maxFuelFlow = MaximumThrust / currentIsp / PluginHelper.GravityConstant;
                 curEngineT.maxFuelFlow = (float)maxFuelFlow;
+
+                curEngineT.propellants.FirstOrDefault(pr => pr.name == InterstellarResourcesConfiguration.Instance.Deuterium).ratio = (float)(standard_deuterium_rate);
+                curEngineT.propellants.FirstOrDefault(pr => pr.name == InterstellarResourcesConfiguration.Instance.Tritium).ratio = (float)(standard_tritium_rate);
             }
 
             radiatorPerformance = (float)Math.Max(1 - (float)(coldBathTemp / maxTempatureRadiators), 0.000001);
